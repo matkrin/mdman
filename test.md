@@ -14,9 +14,13 @@ md-lsp [*OPTIONS*]
 # TEST
 Inline code looks like `this`.
 A code block looks like this the following:
+
+## Code Block
 ```
 man mdman
 ```
+
+## Table
 
 | tets | table |
 |------|-------|

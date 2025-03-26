@@ -25,7 +25,11 @@ fn main() {
 
 #[derive(Debug)]
 enum ManNode {
-    Section {
+    SectionHeading {
+        title: String,
+        children: Vec<ManNode>,
+    },
+    SubsectionHeading {
         title: String,
         children: Vec<ManNode>,
     },
@@ -48,12 +52,21 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Heading(Heading {
             depth, children, ..
         }) => {
+            dbg!(&depth);
             // Concatenate inline text for the heading title.
             let title = children.iter().map(|n| extract_simple_text(n)).collect();
-            vec![ManNode::Section {
-                title,
-                children: vec![],
-            }]
+            let heading = if *depth == 1 {
+                ManNode::SectionHeading {
+                    title,
+                    children: vec![],
+                }
+            } else {
+                ManNode::SubsectionHeading {
+                    title,
+                    children: vec![],
+                }
+            };
+            vec![heading]
         }
         Node::Paragraph(Paragraph { children, .. }) => {
             let mut inlines = Vec::new();
@@ -105,9 +118,13 @@ trait ToRoff {
 impl ToRoff for ManNode {
     fn to_roff(&self) -> String {
         match self {
-            ManNode::Section { title, children } => {
+            ManNode::SectionHeading { title, children } => {
                 let body = children.iter().map(|n| n.to_roff()).collect::<String>();
                 format!(".SH {}\n{}", title, body)
+            }
+            ManNode::SubsectionHeading { title, children } => {
+                let body = children.iter().map(|n| n.to_roff()).collect::<String>();
+                format!(".SS {}\n{}", title, body)
             }
             ManNode::Paragraph { children } => {
                 let content = children.iter().map(|n| n.to_roff()).collect::<String>();
