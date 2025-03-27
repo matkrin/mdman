@@ -208,7 +208,7 @@ impl ToRoff for ManNode {
             ManNode::NumberedList { children } => {
                 let mut content = String::new();
                 for (i, child) in children.iter().enumerate() {
-                    _ = write!(content, ".TP 2\n{}. {}\n", i + 1, child.to_roff());
+                    _ = write!(content, ".IP {}. 2\n{}\n", i + 1, child.to_roff());
                 }
                 format!("\n.RS 2\n.PD 0\n{}\n.PD\n.RE\n", content)
             }
