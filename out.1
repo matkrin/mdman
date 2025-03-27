@@ -23,8 +23,26 @@ A code block looks like this the following:
 .EX
 man mdman
 .EE
-.SS Table
-.PP
-| tets | table |
-|------|-------|
-|a     |b      |
+.SS Lists
+
+.RS
+.IP \(bu 2
+\fBone\fP
+.RS
+.IP \(bu 2
+sublist1
+.IP \(bu 2
+sublist2
+.RS
+.IP \(bu 2
+more nested
+
+.RE
+
+.RE
+.IP \(bu 2
+two
+.IP \(bu 2
+three
+
+.RE

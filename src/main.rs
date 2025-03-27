@@ -3,7 +3,9 @@ use std::{fs, io::Write, path::PathBuf};
 use clap::Parser;
 use markdown::{
     ParseOptions,
-    mdast::{Code, Emphasis, Heading, InlineCode, Node, Paragraph, Root, Strong, Text},
+    mdast::{
+        Code, Emphasis, Heading, InlineCode, List, ListItem, Node, Paragraph, Root, Strong, Text,
+    },
 };
 
 #[derive(Parser, Debug)]
@@ -41,6 +43,12 @@ enum ManNode {
     Italic(String),
     CodeBlock(String),
     InlineCode(String),
+    List {
+        children: Vec<ManNode>,
+    },
+    ListItem {
+        children: Vec<ManNode>,
+    },
     // ...
 }
 
@@ -52,7 +60,6 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Heading(Heading {
             depth, children, ..
         }) => {
-            dbg!(&depth);
             // Concatenate inline text for the heading title.
             let title = children.iter().map(|n| extract_simple_text(n)).collect();
             let heading = if *depth == 1 {
@@ -78,7 +85,120 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Code(Code { value, .. }) => {
             vec![ManNode::CodeBlock(value.to_string())]
         }
-        _ => vec![],
+        Node::List(List {
+            children,
+            ordered,
+            start,
+            ..
+        }) => {
+            let mut items = Vec::new();
+            for child in children {
+                items.extend(convert_markdown_node(child));
+            }
+            vec![ManNode::List { children: items }]
+        }
+        Node::ListItem(ListItem { children, .. }) => {
+            let mut items = Vec::new();
+            for child in children {
+                let p_nodes = convert_markdown_node(child);
+                for n in p_nodes {
+                    match n {
+                        ManNode::Paragraph { children } => items.extend(children),
+                        _ => {items.push(n);}
+                    }
+                }
+            }
+            vec![ManNode::ListItem { children: items }]
+        }
+
+        // [src/main.rs:81:13] &node = List {
+        //     children: [
+        //         ListItem {
+        //             children: [
+        //                 Paragraph {
+        //                     children: [
+        //                         Text {
+        //                             value: "one",
+        //                             position: Some(
+        //                                 24:3-24:6 (304-307),
+        //                             ),
+        //                         },
+        //                     ],
+        //                     position: Some(
+        //                         24:3-24:6 (304-307),
+        //                     ),
+        //                 },
+        //             ],
+        //             position: Some(
+        //                 24:1-24:6 (302-307),
+        //             ),
+        //             spread: false,
+        //             checked: None,
+        //         },
+        //         ListItem {
+        //             children: [
+        //                 Paragraph {
+        //                     children: [
+        //                         Text {
+        //                             value: "two",
+        //                             position: Some(
+        //                                 25:3-25:6 (310-313),
+        //                             ),
+        //                         },
+        //                     ],
+        //                     position: Some(
+        //                         25:3-25:6 (310-313),
+        //                     ),
+        //                 },
+        //             ],
+        //             position: Some(
+        //                 25:1-25:6 (308-313),
+        //             ),
+        //             spread: false,
+        //             checked: None,
+        //         },
+        //         ListItem {
+        //             children: [
+        //                 Paragraph {
+        //                     children: [
+        //                         Text {
+        //                             value: "three",
+        //                             position: Some(
+        //                                 26:3-26:8 (316-321),
+        //                             ),
+        //                         },
+        //                     ],
+        //                     position: Some(
+        //                         26:3-26:8 (316-321),
+        //                     ),
+        //                 },
+        //             ],
+        //             position: Some(
+        //                 26:1-27:1 (314-322),
+        //             ),
+        //             spread: false,
+        //             checked: None,
+        //         },
+        //     ],
+        //     position: Some(
+        //         24:1-27:1 (302-322),
+        //
+        //     ),
+        Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
+        Node::Emphasis(Emphasis { children, .. }) => {
+            // TODO: Now no support for nested formatting.
+            let text = children.iter().map(|n| extract_simple_text(n)).collect();
+            vec![ManNode::Italic(text)]
+        }
+        Node::Strong(Strong { children, .. }) => {
+            let text = children.iter().map(|n| extract_simple_text(n)).collect();
+            vec![ManNode::Bold(text)]
+        }
+        Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
+        _ => {
+            dbg!(&node);
+            vec![]
+        }
     }
 }
 
@@ -140,6 +260,14 @@ impl ToRoff for ManNode {
                 } else {
                     text.to_string()
                 }
+            }
+            ManNode::List { children } => {
+                let content = children.iter().map(|n| n.to_roff()).collect::<String>();
+                format!("\n.RS\n{}\n.RE", content)
+            }
+            ManNode::ListItem { children } => {
+                let content = children.iter().map(|n| n.to_roff()).collect::<String>();
+                format!(".IP \\(bu 2\n{}\n", content)
             }
         }
     }

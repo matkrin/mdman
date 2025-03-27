@@ -20,8 +20,23 @@ A code block looks like this the following:
 man mdman
 ```
 
-## Table
+## Lists
+- **one**
+  - sublist1
+  - sublist2
+    - more nested
+- two
+- three
 
-| tets | table |
-|------|-------|
-|a     |b      |
+<!-- ## Table -->
+
+<!-- | tets | table | -->
+<!-- |------|-------| -->
+<!-- |a     |b      | -->
+
+
+<!-- ``` -->
+<!-- | tets | table | -->
+<!-- |------|-------| -->
+<!-- |a     |b      | -->
+<!-- ``` -->
