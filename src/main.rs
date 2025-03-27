@@ -1,4 +1,5 @@
 use std::{fs, io::Write, path::PathBuf};
+use std::fmt::Write as _;
 
 use clap::Parser;
 use markdown::{
@@ -43,7 +44,10 @@ enum ManNode {
     Italic(String),
     CodeBlock(String),
     InlineCode(String),
-    List {
+    BulletList {
+        children: Vec<ManNode>,
+    },
+    NumberedList {
         children: Vec<ManNode>,
     },
     ListItem {
@@ -78,7 +82,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Paragraph(Paragraph { children, .. }) => {
             let mut inlines = Vec::new();
             for child in children {
-                inlines.extend(convert_inline(child));
+                inlines.extend(convert_markdown_node(child));
             }
             vec![ManNode::Paragraph { children: inlines }]
         }
@@ -95,7 +99,12 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             for child in children {
                 items.extend(convert_markdown_node(child));
             }
-            vec![ManNode::List { children: items }]
+            let man_node = if *ordered {
+                ManNode::NumberedList { children: items }
+            } else {
+                ManNode::BulletList { children: items }
+            };
+            vec![man_node]
         }
         Node::ListItem(ListItem { children, .. }) => {
             let mut items = Vec::new();
@@ -104,86 +113,12 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
                 for n in p_nodes {
                     match n {
                         ManNode::Paragraph { children } => items.extend(children),
-                        _ => {items.push(n);}
+                        _ => items.push(n),
                     }
                 }
             }
             vec![ManNode::ListItem { children: items }]
         }
-
-        // [src/main.rs:81:13] &node = List {
-        //     children: [
-        //         ListItem {
-        //             children: [
-        //                 Paragraph {
-        //                     children: [
-        //                         Text {
-        //                             value: "one",
-        //                             position: Some(
-        //                                 24:3-24:6 (304-307),
-        //                             ),
-        //                         },
-        //                     ],
-        //                     position: Some(
-        //                         24:3-24:6 (304-307),
-        //                     ),
-        //                 },
-        //             ],
-        //             position: Some(
-        //                 24:1-24:6 (302-307),
-        //             ),
-        //             spread: false,
-        //             checked: None,
-        //         },
-        //         ListItem {
-        //             children: [
-        //                 Paragraph {
-        //                     children: [
-        //                         Text {
-        //                             value: "two",
-        //                             position: Some(
-        //                                 25:3-25:6 (310-313),
-        //                             ),
-        //                         },
-        //                     ],
-        //                     position: Some(
-        //                         25:3-25:6 (310-313),
-        //                     ),
-        //                 },
-        //             ],
-        //             position: Some(
-        //                 25:1-25:6 (308-313),
-        //             ),
-        //             spread: false,
-        //             checked: None,
-        //         },
-        //         ListItem {
-        //             children: [
-        //                 Paragraph {
-        //                     children: [
-        //                         Text {
-        //                             value: "three",
-        //                             position: Some(
-        //                                 26:3-26:8 (316-321),
-        //                             ),
-        //                         },
-        //                     ],
-        //                     position: Some(
-        //                         26:3-26:8 (316-321),
-        //                     ),
-        //                 },
-        //             ],
-        //             position: Some(
-        //                 26:1-27:1 (314-322),
-        //             ),
-        //             spread: false,
-        //             checked: None,
-        //         },
-        //     ],
-        //     position: Some(
-        //         24:1-27:1 (302-322),
-        //
-        //     ),
         Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
         Node::Emphasis(Emphasis { children, .. }) => {
             // TODO: Now no support for nested formatting.
@@ -202,22 +137,22 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
     }
 }
 
-fn convert_inline(node: &Node) -> Vec<ManNode> {
-    match node {
-        Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
-        Node::Emphasis(Emphasis { children, .. }) => {
-            // TODO: Now no support for nested formatting.
-            let text = children.iter().map(|n| extract_simple_text(n)).collect();
-            vec![ManNode::Italic(text)]
-        }
-        Node::Strong(Strong { children, .. }) => {
-            let text = children.iter().map(|n| extract_simple_text(n)).collect();
-            vec![ManNode::Bold(text)]
-        }
-        Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
-        _ => vec![],
-    }
-}
+// fn convert_inline(node: &Node) -> Vec<ManNode> {
+//     match node {
+//         Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
+//         Node::Emphasis(Emphasis { children, .. }) => {
+//             // TODO: Now no support for nested formatting.
+//             let text = children.iter().map(|n| extract_simple_text(n)).collect();
+//             vec![ManNode::Italic(text)]
+//         }
+//         Node::Strong(Strong { children, .. }) => {
+//             let text = children.iter().map(|n| extract_simple_text(n)).collect();
+//             vec![ManNode::Bold(text)]
+//         }
+//         Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
+//         _ => vec![],
+//     }
+// }
 
 fn extract_simple_text(node: &Node) -> String {
     match node {
@@ -261,13 +196,24 @@ impl ToRoff for ManNode {
                     text.to_string()
                 }
             }
-            ManNode::List { children } => {
-                let content = children.iter().map(|n| n.to_roff()).collect::<String>();
-                format!("\n.RS\n{}\n.RE", content)
+            ManNode::BulletList { children } => {
+                let mut content = String::new();
+                for child in children {
+                    content.push_str(".IP \\(bu 2\n");
+                    content.push_str(&child.to_roff());
+                    content.push('\n')
+                }
+                format!("\n.RS 2\n.PD 0\n{}\n.PD\n.RE\n", content)
+            }
+            ManNode::NumberedList { children } => {
+                let mut content = String::new();
+                for (i, child) in children.iter().enumerate() {
+                    _ = write!(content, ".TP 2\n{}. {}\n", i + 1, child.to_roff());
+                }
+                format!("\n.RS 2\n.PD 0\n{}\n.PD\n.RE\n", content)
             }
             ManNode::ListItem { children } => {
-                let content = children.iter().map(|n| n.to_roff()).collect::<String>();
-                format!(".IP \\(bu 2\n{}\n", content)
+                children.iter().map(|n| n.to_roff()).collect::<String>()
             }
         }
     }

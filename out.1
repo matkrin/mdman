@@ -23,26 +23,67 @@ A code block looks like this the following:
 .EX
 man mdman
 .EE
-.SS Lists
+.SS Bullet Lists
+.PP
+Bullet lists look like:
 
-.RS
+.RS 2
+.PD 0
 .IP \(bu 2
 \fBone\fP
-.RS
+.RS 2
+.PD 0
 .IP \(bu 2
 sublist1
 .IP \(bu 2
 sublist2
-.RS
+.RS 2
+.PD 0
 .IP \(bu 2
 more nested
 
+.PD
 .RE
 
+
+.PD
 .RE
+
 .IP \(bu 2
 two
 .IP \(bu 2
 three
+.IP \(bu 2
+four
 
+.PD
+.RE
+.SS Numbered Lists
+.PP
+Numbered lists look like:
+
+.RS 2
+.PD 0
+.TP 2
+1. \fBone\fP
+.TP 2
+2. two:
+.RS 2
+.PD 0
+.TP 2
+1. sub1
+.TP 2
+2. sub2
+
+.PD
+.RE
+
+.TP 2
+3. trhee
+.TP 2
+4. four
+.TP 2
+5. five
+
+.PD
 .RE

@@ -20,13 +20,26 @@ A code block looks like this the following:
 man mdman
 ```
 
-## Lists
+## Bullet Lists
+Bullet lists look like:
 - **one**
   - sublist1
   - sublist2
     - more nested
 - two
 - three
+- four
+
+
+## Numbered Lists
+Numbered lists look like:
+1. **one**
+2. two:
+    1. sub1
+    2. sub2
+3. trhee
+4. four
+5. five
 
 <!-- ## Table -->
 
