@@ -1,5 +1,5 @@
-use std::{fs, io::Write, path::PathBuf};
 use std::fmt::Write as _;
+use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
 use markdown::{
@@ -28,6 +28,11 @@ fn main() {
 
 #[derive(Debug)]
 enum ManNode {
+    TitleLine {
+        title: String,
+        section: String,
+        date: String,
+    },
     SectionHeading {
         title: String,
         children: Vec<ManNode>,
@@ -183,7 +188,7 @@ impl ToRoff for ManNode {
             }
             ManNode::Paragraph { children } => {
                 let content = children.iter().map(|n| n.to_roff()).collect::<String>();
-                format!(".PP\n{}\n", content)
+                format!(".PD\n.PP\n{}\n", content)
             }
             ManNode::Bold(text) => format!("\\fB{}\\fP", text),
             ManNode::Italic(text) => format!("\\fI{}\\fP", text),
@@ -203,14 +208,14 @@ impl ToRoff for ManNode {
                     content.push_str(&child.to_roff());
                     content.push('\n')
                 }
-                format!("\n.RS 2\n.PD 0\n{}\n.PD\n.RE\n", content)
+                format!("\n.RS 2\n.PD 0\n{}\n.RE\n", content)
             }
             ManNode::NumberedList { children } => {
                 let mut content = String::new();
                 for (i, child) in children.iter().enumerate() {
-                    _ = write!(content, ".IP {}. 2\n{}\n", i + 1, child.to_roff());
+                    _ = write!(content, ".IP {}. 4\n{}\n", i + 1, child.to_roff());
                 }
-                format!("\n.RS 2\n.PD 0\n{}\n.PD\n.RE\n", content)
+                format!("\n.RS 2\n.PD 0\n{}\n.RE\n", content)
             }
             ManNode::ListItem { children } => {
                 children.iter().map(|n| n.to_roff()).collect::<String>()
