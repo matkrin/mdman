@@ -18,7 +18,7 @@ md-lsp [*OPTIONS*]
     Show the version
         
 # TEST
-Inline code looks like `this`.
+Inline code looks like `this`. This is a link to [google](https://google.com), how to does it look like.
 A code block looks like this the following:
 
 ## Code Block

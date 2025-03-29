@@ -3,7 +3,7 @@ use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
 use markdown::Constructs;
-use markdown::mdast::Yaml;
+use markdown::mdast::{Link, Yaml};
 use markdown::{
     ParseOptions,
     mdast::{
@@ -64,7 +64,11 @@ enum ManNode {
     ListItem {
         children: Vec<ManNode>,
     },
-    // ...
+    Uri {
+        url: String,
+        title: Option<String>,
+        children: Vec<ManNode>,
+    }, // ...
 }
 
 #[derive(Debug, Deserialize)]
@@ -156,6 +160,22 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             vec![ManNode::Bold(text)]
         }
         Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
+        Node::Link(Link {
+            children,
+            position,
+            url,
+            title,
+        }) => {
+            let mut items = Vec::new();
+            for child in children {
+                items.extend(convert_markdown_node(child));
+            }
+            vec![ManNode::Uri {
+                url: url.clone(),
+                title: title.clone(),
+                children: items,
+            }]
+        }
         _ => {
             // dbg!(&node);
             vec![]
@@ -242,6 +262,7 @@ impl ToRoff for ManNode {
             ManNode::InlineCode(text) => format!("\\fC{}\\fP", text),
             ManNode::CodeBlock(text) => format!(".EX\n{}\n.EE\n", text),
             ManNode::Text(text) => {
+                let text = escape(text);
                 if text.starts_with("\n") {
                     format!("\n.RS 8{}\n.RE", text)
                 } else {
@@ -267,6 +288,22 @@ impl ToRoff for ManNode {
             ManNode::ListItem { children } => {
                 children.iter().map(|n| n.to_roff()).collect::<String>()
             }
+            ManNode::Uri {
+                url,
+                title: _title,
+                children,
+            } => {
+                // dbg!(&url);
+                // dbg!(&_title);
+                // dbg!(&children);
+                let text = children.iter().map(|n| n.to_roff()).collect::<String>();
+                // let url = format!("\\fI{}\\fP", url);
+                format!("\n.UR {}\n{}\n.UE\n", url, text)
+            }
         }
     }
+}
+
+fn escape(text: &str) -> String {
+    text.replace('.', "\\&.")
 }
