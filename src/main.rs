@@ -2,12 +2,15 @@ use std::fmt::Write as _;
 use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
+use markdown::Constructs;
+use markdown::mdast::Yaml;
 use markdown::{
     ParseOptions,
     mdast::{
         Code, Emphasis, Heading, InlineCode, List, ListItem, Node, Paragraph, Root, Strong, Text,
     },
 };
+use serde::Deserialize;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -17,9 +20,16 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let file_content = fs::read_to_string(args.file).unwrap();
-    let markdown_ast = markdown::to_mdast(&file_content, &ParseOptions::default()).unwrap();
+    let parse_options = ParseOptions {
+        constructs: Constructs {
+            frontmatter: true,
+            ..Constructs::default()
+        },
+        ..ParseOptions::gfm()
+    };
+    let markdown_ast = markdown::to_mdast(&file_content, &parse_options).unwrap();
     let man_nodes = convert_markdown_node(&markdown_ast);
-    dbg!(&man_nodes);
+    // dbg!(&man_nodes);
 
     let roff = man_nodes.iter().map(|n| n.to_roff()).collect::<String>();
     let mut out_file = fs::File::create("./out.1").unwrap();
@@ -28,11 +38,7 @@ fn main() {
 
 #[derive(Debug)]
 enum ManNode {
-    TitleLine {
-        title: String,
-        section: String,
-        date: String,
-    },
+    TitleLine(TitleLine),
     SectionHeading {
         title: String,
         children: Vec<ManNode>,
@@ -61,10 +67,25 @@ enum ManNode {
     // ...
 }
 
+#[derive(Debug, Deserialize)]
+struct TitleLine {
+    name: String,
+    section: String,
+    date: Option<String>,
+    #[serde(alias = "left-footer")]
+    left_footer: Option<String>,
+    #[serde(alias = "center-footer")]
+    center_footer: Option<String>,
+}
+
 fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
     match node {
         Node::Root(Root { children, .. }) => {
             children.iter().flat_map(convert_markdown_node).collect()
+        }
+        Node::Yaml(Yaml { value, .. }) => {
+            let title_line = serde_yaml::from_str::<TitleLine>(value).unwrap();
+            vec![ManNode::TitleLine(title_line)]
         }
         Node::Heading(Heading {
             depth, children, ..
@@ -136,7 +157,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         }
         Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
         _ => {
-            dbg!(&node);
+            // dbg!(&node);
             vec![]
         }
     }
@@ -178,6 +199,32 @@ trait ToRoff {
 impl ToRoff for ManNode {
     fn to_roff(&self) -> String {
         match self {
+            ManNode::TitleLine(TitleLine {
+                name,
+                section,
+                date,
+                left_footer,
+                center_footer,
+            }) => {
+                let mut th = format!(".TH \"{}\" \"{}\"", name.to_uppercase(), section);
+                if let Some(d) = date {
+                    th.push_str(" \"");
+                    th.push_str(d);
+                    th.push('"');
+                }
+                if let Some(lf) = left_footer {
+                    th.push_str(" \"");
+                    th.push_str(lf);
+                    th.push('"');
+                }
+                if let Some(cf) = center_footer {
+                    th.push_str(" \"");
+                    th.push_str(cf);
+                    th.push('"');
+                }
+                th.push('\n');
+                th
+            }
             ManNode::SectionHeading { title, children } => {
                 let body = children.iter().map(|n| n.to_roff()).collect::<String>();
                 format!(".SH {}\n{}", title, body)

@@ -1,3 +1,9 @@
+---
+name: md-lsp
+section: 1
+date: 2025-03-29
+---
+
 # NAME
 md-lsp - markdown language server
 
