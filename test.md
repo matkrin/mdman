@@ -18,7 +18,8 @@ md-lsp [*OPTIONS*]
     Show the version
         
 # TEST
-Inline code looks like `this`. This is a link to [google](https://google.com), how to does it look like.
+Inline code looks like `this`. This is a link to [google](https://google.com), how to does it look like?
+How does this https://man.cx look like?
 A code block looks like this the following:
 
 ## Code Block
@@ -47,15 +48,16 @@ Numbered lists look like:
 4. four
 5. five
 
-<!-- ## Table -->
+## Table
 
-<!-- | tets | table | -->
-<!-- |------|-------| -->
-<!-- |a     |b      | -->
+| tets | table | left | right |
+|------|:-----:|:-----|------:|
+|a     |b      | c    | d     |
+| 1    |    2  |  3   |   4   |
 
 
-<!-- ``` -->
-<!-- | tets | table | -->
-<!-- |------|-------| -->
-<!-- |a     |b      | -->
-<!-- ``` -->
+```
+| tets | table |
+|------|-------|
+|a     |b      |
+```

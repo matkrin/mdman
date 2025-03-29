@@ -3,7 +3,7 @@ use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
 use markdown::Constructs;
-use markdown::mdast::{Link, Yaml};
+use markdown::mdast::{AlignKind, Link, Table, TableCell, TableRow, Yaml};
 use markdown::{
     ParseOptions,
     mdast::{
@@ -11,6 +11,8 @@ use markdown::{
     },
 };
 use serde::Deserialize;
+
+// const TBL_PREPROCESSOR_INDICATOR: &str = "'\\\" t";
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -23,6 +25,7 @@ fn main() {
     let parse_options = ParseOptions {
         constructs: Constructs {
             frontmatter: true,
+            gfm_table: true,
             ..Constructs::default()
         },
         ..ParseOptions::gfm()
@@ -69,6 +72,12 @@ enum ManNode {
         title: Option<String>,
         children: Vec<ManNode>,
     }, // ...
+    Table {
+        align: Vec<TableAlign>,
+        children: Vec<ManNode>,
+    },
+    TableRow(Vec<ManNode>),
+    TableCell(Vec<ManNode>),
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,6 +89,25 @@ struct TitleLine {
     left_footer: Option<String>,
     #[serde(alias = "center-footer")]
     center_footer: Option<String>,
+}
+
+#[derive(Debug)]
+enum TableAlign {
+    Left,
+    Right,
+    Center,
+    None,
+}
+
+impl From<&AlignKind> for TableAlign {
+    fn from(value: &AlignKind) -> Self {
+        match value {
+            AlignKind::Left => TableAlign::Left,
+            AlignKind::Right => TableAlign::Right,
+            AlignKind::Center => TableAlign::Center,
+            AlignKind::None => TableAlign::None,
+        }
+    }
 }
 
 fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
@@ -95,7 +123,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             depth, children, ..
         }) => {
             // Concatenate inline text for the heading title.
-            let title = children.iter().map(|n| extract_simple_text(n)).collect();
+            let title = children.iter().map(extract_simple_text).collect();
             let heading = if *depth == 1 {
                 ManNode::SectionHeading {
                     title,
@@ -120,10 +148,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             vec![ManNode::CodeBlock(value.to_string())]
         }
         Node::List(List {
-            children,
-            ordered,
-            start,
-            ..
+            children, ordered, ..
         }) => {
             let mut items = Vec::new();
             for child in children {
@@ -152,19 +177,19 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
         Node::Emphasis(Emphasis { children, .. }) => {
             // TODO: Now no support for nested formatting.
-            let text = children.iter().map(|n| extract_simple_text(n)).collect();
+            let text = children.iter().map(extract_simple_text).collect();
             vec![ManNode::Italic(text)]
         }
         Node::Strong(Strong { children, .. }) => {
-            let text = children.iter().map(|n| extract_simple_text(n)).collect();
+            let text = children.iter().map(extract_simple_text).collect();
             vec![ManNode::Bold(text)]
         }
         Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
         Node::Link(Link {
             children,
-            position,
             url,
             title,
+            ..
         }) => {
             let mut items = Vec::new();
             for child in children {
@@ -176,8 +201,35 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
                 children: items,
             }]
         }
+        Node::Table(Table {
+            children, align, ..
+        }) => {
+            let mut items = Vec::new();
+            for child in children {
+                items.extend(convert_markdown_node(child));
+            }
+            let table_align: Vec<TableAlign> = align.iter().map(Into::into).collect();
+            vec![ManNode::Table {
+                align: table_align,
+                children: items,
+            }]
+        }
+        Node::TableRow(TableRow { children, .. }) => {
+            let mut items = Vec::new();
+            for child in children {
+                items.extend(convert_markdown_node(child));
+            }
+            vec![ManNode::TableRow(items)]
+        }
+        Node::TableCell(TableCell { children, .. }) => {
+            let mut items = Vec::new();
+            for child in children {
+                items.extend(convert_markdown_node(child));
+            }
+            vec![ManNode::TableCell(items)]
+        }
         _ => {
-            // dbg!(&node);
+            dbg!(&node);
             vec![]
         }
     }
@@ -299,6 +351,39 @@ impl ToRoff for ManNode {
                 let text = children.iter().map(|n| n.to_roff()).collect::<String>();
                 // let url = format!("\\fI{}\\fP", url);
                 format!("\n.UR {}\n{}\n.UE\n", url, text)
+            }
+            ManNode::Table { align, children } => {
+                let mut table = ".TS\n".to_string();
+                table.push_str("allbox;\n");
+                // table.push_str("box;\n");
+                // table.push_str("doublebox;\n");
+                let align_chars = align
+                    .iter()
+                    .map(|a| match a {
+                        TableAlign::Left => "l",
+                        TableAlign::Right => "r",
+                        TableAlign::Center => "c",
+                        TableAlign::None => "l",
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                table.push_str(&align_chars);
+                table.push('.');
+                table.push('\n');
+                let text = children.iter().map(|n| n.to_roff()).collect::<String>();
+                table.push_str(&text);
+                table.push_str(".TE");
+                table.push('\n');
+                table
+            }
+            ManNode::TableRow(children) => {
+                let text = children.iter().map(|n| n.to_roff()).collect::<String>();
+                format!("{}\n", text)
+            }
+            ManNode::TableCell(children) => {
+                let text = children.iter().map(|n| n.to_roff()).collect::<String>();
+                format! {"T{{\n{}\nT}}\t", text}
             }
         }
     }
