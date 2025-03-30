@@ -1,3 +1,4 @@
+use std::io::stdout;
 use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
@@ -17,13 +18,23 @@ use crate::roff::ToRoff;
 // const TBL_PREPROCESSOR_INDICATOR: &str = "'\\\" t";
 
 #[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 struct Args {
     file: PathBuf,
+    /// Print to stdout instead of creating a file.
+    #[arg(short, long)]
+    stdout: bool,
+    // /// name
+    // #[arg(short, long)]
+    // name: Option<String>,
+    // /// section
+    // #[arg(short, long)]
+    // section: Option<u8>,
 }
 
 fn main() {
     let args = Args::parse();
-    let file_content = fs::read_to_string(args.file).unwrap();
+    let file_content = fs::read_to_string(&args.file).unwrap();
     let parse_options = ParseOptions {
         constructs: Constructs {
             frontmatter: true,
@@ -37,8 +48,15 @@ fn main() {
     // dbg!(&man_nodes);
 
     let roff = man_nodes.iter().map(|n| n.to_roff()).collect::<String>();
-    let mut out_file = fs::File::create("./out.1").unwrap();
-    _ = out_file.write(roff.as_bytes());
+    if args.stdout {
+        let mut stdout = stdout();
+        _ = stdout.write_all(roff.as_bytes());
+    } else {
+        let mut out_path = args.file.clone();
+        out_path.set_extension("1");
+        let mut out_file = fs::File::create(&out_path).unwrap();
+        _ = out_file.write(roff.as_bytes());
+    }
 }
 
 #[derive(Debug)]
@@ -73,7 +91,7 @@ enum ManNode {
         url: String,
         title: Option<String>,
         children: Vec<ManNode>,
-    }, // ...
+    },
     Table {
         align: Vec<TableAlign>,
         children: Vec<ManNode>,
@@ -85,7 +103,7 @@ enum ManNode {
 #[derive(Debug, Deserialize)]
 struct TitleLine {
     name: String,
-    section: String,
+    section: u8,
     date: Option<String>,
     #[serde(alias = "left-footer")]
     left_footer: Option<String>,
@@ -124,7 +142,6 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Heading(Heading {
             depth, children, ..
         }) => {
-            // Concatenate inline text for the heading title.
             let title = children.iter().map(extract_simple_text).collect();
             let heading = if *depth == 1 {
                 ManNode::SectionHeading {
@@ -140,10 +157,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             vec![heading]
         }
         Node::Paragraph(Paragraph { children, .. }) => {
-            let mut inlines = Vec::new();
-            for child in children {
-                inlines.extend(convert_markdown_node(child));
-            }
+            let inlines = children.iter().flat_map(convert_markdown_node).collect();
             vec![ManNode::Paragraph { children: inlines }]
         }
         Node::Code(Code { value, .. }) => {
@@ -152,10 +166,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::List(List {
             children, ordered, ..
         }) => {
-            let mut items = Vec::new();
-            for child in children {
-                items.extend(convert_markdown_node(child));
-            }
+            let items = children.iter().flat_map(convert_markdown_node).collect();
             let man_node = if *ordered {
                 ManNode::NumberedList { children: items }
             } else {
@@ -193,10 +204,7 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             title,
             ..
         }) => {
-            let mut items = Vec::new();
-            for child in children {
-                items.extend(convert_markdown_node(child));
-            }
+            let items = children.iter().flat_map(convert_markdown_node).collect();
             vec![ManNode::Uri {
                 url: url.clone(),
                 title: title.clone(),
@@ -206,28 +214,19 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Table(Table {
             children, align, ..
         }) => {
-            let mut items = Vec::new();
-            for child in children {
-                items.extend(convert_markdown_node(child));
-            }
-            let table_align: Vec<TableAlign> = align.iter().map(Into::into).collect();
+            let items = children.iter().flat_map(convert_markdown_node).collect();
+            let table_align = align.iter().map(Into::into).collect();
             vec![ManNode::Table {
                 align: table_align,
                 children: items,
             }]
         }
         Node::TableRow(TableRow { children, .. }) => {
-            let mut items = Vec::new();
-            for child in children {
-                items.extend(convert_markdown_node(child));
-            }
+            let items = children.iter().flat_map(convert_markdown_node).collect();
             vec![ManNode::TableRow(items)]
         }
         Node::TableCell(TableCell { children, .. }) => {
-            let mut items = Vec::new();
-            for child in children {
-                items.extend(convert_markdown_node(child));
-            }
+            let items = children.iter().flat_map(convert_markdown_node).collect();
             vec![ManNode::TableCell(items)]
         }
         _ => {
@@ -237,22 +236,6 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
     }
 }
 
-// fn convert_inline(node: &Node) -> Vec<ManNode> {
-//     match node {
-//         Node::Text(Text { value, .. }) => vec![ManNode::Text(value.to_string())],
-//         Node::Emphasis(Emphasis { children, .. }) => {
-//             // TODO: Now no support for nested formatting.
-//             let text = children.iter().map(|n| extract_simple_text(n)).collect();
-//             vec![ManNode::Italic(text)]
-//         }
-//         Node::Strong(Strong { children, .. }) => {
-//             let text = children.iter().map(|n| extract_simple_text(n)).collect();
-//             vec![ManNode::Bold(text)]
-//         }
-//         Node::InlineCode(InlineCode { value, .. }) => vec![ManNode::InlineCode(value.to_string())],
-//         _ => vec![],
-//     }
-// }
 
 fn extract_simple_text(node: &Node) -> String {
     match node {
