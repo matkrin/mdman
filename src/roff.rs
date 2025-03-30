@@ -134,5 +134,12 @@ impl ToRoff for ManNode {
 }
 
 fn escape(text: &str) -> String {
-    text.replace('.', "\\&.")
+    text.replace('\\', "\\\\")
+        .replace('.', "\\&.")
+        .replace('\'', "\\&'")
+        .replace('"', "\\&\"")
+        .replace('-', "\\-")
+        .replace('~', "\\(ti")
+        .replace('|', "\\(ba")
+        .replace('%', "\\%")
 }
