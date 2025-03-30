@@ -1,5 +1,7 @@
 use std::fmt::Write;
 
+use jiff::Zoned;
+
 use crate::{ManNode, TableAlign, TitleLine};
 
 pub trait ToRoff {
@@ -17,11 +19,15 @@ impl ToRoff for ManNode {
                 center_footer,
             }) => {
                 let mut th = format!(".TH \"{}\" \"{}\"", name.to_uppercase(), section);
+                th.push_str(" \"");
                 if let Some(d) = date {
-                    th.push_str(" \"");
                     th.push_str(d);
-                    th.push('"');
+                } else {
+                    let d = Zoned::now().strftime("%Y-%m-%d").to_string();
+                    th.push_str(&d);
                 }
+                th.push('"');
+
                 if let Some(lf) = left_footer {
                     th.push_str(" \"");
                     th.push_str(lf);
