@@ -34,11 +34,11 @@ The resulting binary will be in target/release/md2man.
 ## Usage
 
 ```sh
-md2man <file.md>
+md2man [OPTIONS] [<file.md>]
 ```
 
-By default, this will generate a man page with the same base filename but a .1
-extension.
+If no file is provided, Markdown is read from stdin. If no output file is
+specified, output is printed to stdout.
 
 ### Options
 
@@ -50,19 +50,64 @@ extension.
 -V, --version            Print version
 ```
 
-### Example
+### Examples
+
+From file to stdout:
 
 ```sh
-md2man mytool.md
+mdman doc.md --stdout
 ```
 
-Generates mytool.1.
+From stdin to stdout:
 
 ```sh
-md2man mytool.md --stdout
+cat doc.md | mdman
 ```
 
-Prints the man page to the terminal.
+From stdin to file:
+
+```sh
+cat doc.md | mdman --output out.5
+```
+
+### Combine with other utilities
+
+Pipe to man from a Markdown file:
+
+```sh
+# Linux
+mdman mytool.md --stdout | man -l -
+
+# macOS
+mdman mytool.md --stdout | mandoc | less
+```
+
+Or, with default stdout behavior when using stdin:
+
+```sh
+# Linux
+cat mytool.md | mdman | man -l -
+
+# macOS
+cat mytool.md | mdman | mandoc | less
+```
+
+You can even create a shell alias if you use this often:
+
+```sh
+# Linux
+alias mmd='mdman --stdout | man -l -'
+
+# macOS
+alias mmd='mdman --stdout | mandoc | less'
+```
+
+Then run:
+
+```sh
+mmd mytool.md
+```
+
 
 ## Markdown Format
 
@@ -115,17 +160,15 @@ Generates `.roff`-formatted man pages using appropriate macros:
 
 - `.TH`, `.SH`, `.SS`, `.PP`, `.IP`, `.EX`, `.UR`, `.TS`, etc.
 - Proper escaping of special characters
-- Smart formatting of lists and nested structures
+- Formatting of lists and nested structures
 
 ## Known Limitations
 
 - No support for deeply nested formatting (e.g. bold inside italics)
 - Limited error handling on malformed Markdown or YAML
-- Currently assumes output section `.1` (general commands)
 
 ## Future Enhancements
 
-- Custom output section and filename via CLI
 - Support for man page cross-referencing
 - Improved formatting for nested styles
 - Optional preview rendering (e.g. using `man` pager directly)
