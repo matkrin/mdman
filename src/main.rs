@@ -20,17 +20,17 @@ use crate::roff::ToRoff;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Markdown file to convert
+    /// Markdown file to convert.
     file: PathBuf,
-    /// Override section number for output (e.g., 1 for general commands)
+    /// Override section number for output (e.g., 1 for general commands).
     #[arg(short, long)]
     section: Option<u8>,
     /// Print to stdout instead of creating a file.
-    #[arg(short='S', long)]
+    #[arg(short = 'S', long)]
     stdout: bool,
-    // /// name
-    // #[arg(short, long)]
-    // name: Option<String>,
+    /// Output filename (Overrides automatic naming).
+    #[arg(short, long)]
+    output: Option<PathBuf>,
 }
 
 fn main() {
@@ -62,7 +62,9 @@ fn main() {
         let mut stdout = stdout();
         _ = stdout.write_all(roff.as_bytes());
     } else {
-        let out_path = {
+        let out_path = if let Some(output) = args.output {
+            output
+        } else {
             let stem = args.file.file_stem().unwrap().to_string_lossy();
             let base_name = PathBuf::from(stem.split('.').next().unwrap());
             base_name.with_extension(section.to_string())
