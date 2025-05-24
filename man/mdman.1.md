@@ -40,20 +40,32 @@ number, and headers/footers.
 # EXAMPLES
 
 - Convert a Markdown file and output to mytool.1:
-```
+```sh
         $ mdman mytool.md
 ```
 
-- Preview the generated output:
+- Preview the generated output (print to stdout):
 
-```
+```sh
         $ mdman --stdout mytool.md
 ```
 
 - Override the section number:
 
-```
+```sh
         $ mdman mytool.md --section 5
+```
+
+- From stdin to stdout:
+
+```sh
+        $ cat doc.md | mdman
+```
+
+- From stdin to file:
+
+```sh
+        $ cat doc.md | mdman --output out.5
 ```
 
 # SEE ALSO
