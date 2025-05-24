@@ -45,6 +45,7 @@ extension.
 ```
 -s, --section <SECTION>  Override section number for output (e.g., 1 for general commands)
 -S, --stdout             Print to stdout instead of creating a file
+-o, --output <OUTPUT>    Output filename
 -h, --help               Print help
 -V, --version            Print version
 ```
