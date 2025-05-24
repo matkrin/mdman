@@ -1,4 +1,4 @@
-use std::io::stdout;
+use std::io::{self, stdout, Read};
 use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
@@ -21,7 +21,7 @@ use crate::roff::ToRoff;
 #[command(version, about, long_about = None)]
 struct Args {
     /// Markdown file to convert.
-    file: PathBuf,
+    file: Option<PathBuf>,
     /// Override section number for output (e.g., 1 for general commands).
     #[arg(short, long)]
     section: Option<u8>,
@@ -35,7 +35,15 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let file_content = fs::read_to_string(&args.file).unwrap();
+
+    let file_content = if let Some(ref file) = args.file {
+        fs::read_to_string(file).unwrap()
+    } else {
+        let mut buf = String::new();
+        io::stdin().read_to_string(&mut buf).unwrap();
+        buf
+    };
+
     let parse_options = ParseOptions {
         constructs: Constructs {
             frontmatter: true,
@@ -44,6 +52,7 @@ fn main() {
         },
         ..ParseOptions::gfm()
     };
+
     let markdown_ast = markdown::to_mdast(&file_content, &parse_options).unwrap();
     let man_nodes = convert_markdown_node(&markdown_ast);
 
@@ -58,14 +67,15 @@ fn main() {
     });
 
     let roff = man_nodes.iter().map(|n| n.to_roff()).collect::<String>();
-    if args.stdout {
+
+    if args.stdout || args.file.is_none() {
         let mut stdout = stdout();
         _ = stdout.write_all(roff.as_bytes());
     } else {
         let out_path = if let Some(output) = args.output {
             output
         } else {
-            let stem = args.file.file_stem().unwrap().to_string_lossy();
+            let stem = args.file.as_ref().unwrap().file_stem().unwrap().to_string_lossy();
             let base_name = PathBuf::from(stem.split('.').next().unwrap());
             base_name.with_extension(section.to_string())
         };
