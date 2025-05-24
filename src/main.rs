@@ -62,8 +62,11 @@ fn main() {
         let mut stdout = stdout();
         _ = stdout.write_all(roff.as_bytes());
     } else {
-        let mut out_path = args.file.clone();
-        out_path.set_extension(section.to_string());
+        let out_path = {
+            let stem = args.file.file_stem().unwrap().to_string_lossy();
+            let base_name = PathBuf::from(stem.split('.').next().unwrap());
+            base_name.with_extension(section.to_string())
+        };
         let mut out_file = fs::File::create(&out_path).unwrap();
         _ = out_file.write(roff.as_bytes());
     }
