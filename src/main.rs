@@ -20,16 +20,17 @@ use crate::roff::ToRoff;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// Markdown file to convert
     file: PathBuf,
-    /// Print to stdout instead of creating a file.
+    /// Override section number for output (e.g., 1 for general commands)
     #[arg(short, long)]
+    section: Option<u8>,
+    /// Print to stdout instead of creating a file.
+    #[arg(short='S', long)]
     stdout: bool,
     // /// name
     // #[arg(short, long)]
     // name: Option<String>,
-    // /// section
-    // #[arg(short, long)]
-    // section: Option<u8>,
 }
 
 fn main() {
@@ -45,7 +46,16 @@ fn main() {
     };
     let markdown_ast = markdown::to_mdast(&file_content, &parse_options).unwrap();
     let man_nodes = convert_markdown_node(&markdown_ast);
-    // dbg!(&man_nodes);
+
+    let section = args.section.unwrap_or_else(|| {
+        match man_nodes
+            .iter()
+            .find(|&node| matches!(node, ManNode::TitleLine(_)))
+        {
+            Some(ManNode::TitleLine(title_line)) => title_line.section,
+            _ => 1,
+        }
+    });
 
     let roff = man_nodes.iter().map(|n| n.to_roff()).collect::<String>();
     if args.stdout {
@@ -53,7 +63,7 @@ fn main() {
         _ = stdout.write_all(roff.as_bytes());
     } else {
         let mut out_path = args.file.clone();
-        out_path.set_extension("1");
+        out_path.set_extension(section.to_string());
         let mut out_file = fs::File::create(&out_path).unwrap();
         _ = out_file.write(roff.as_bytes());
     }
@@ -235,7 +245,6 @@ fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         }
     }
 }
-
 
 fn extract_simple_text(node: &Node) -> String {
     match node {
