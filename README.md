@@ -45,7 +45,8 @@ specified, output is printed to stdout.
 ```
 -s, --section <SECTION>  Override section number for output (e.g., 1 for general commands)
 -S, --stdout             Print to stdout instead of creating a file
--o, --output <OUTPUT>    Output filename
+-o, --output <OUTPUT>    Output filename (Overrides automatic naming)
+-p, --pager              Preview the generated man page in a pager. (Overrides --output and --stdout)
 -h, --help               Print help
 -V, --version            Print version
 ```
@@ -72,42 +73,25 @@ cat doc.md | mdman --output out.5
 
 ### Combine with other utilities
 
-Pipe to man from a Markdown file:
+Create HTML of the man page:
 
 ```sh
 # Linux
-mdman mytool.md --stdout | man -l -
+# TODO
 
 # macOS
-mdman mytool.md --stdout | mandoc | less
+mdman mytool.md --stdout | mandoc -T html > out.html
 ```
 
-Or, with default stdout behavior when using stdin:
+Use [bat](https://github.com/sharkdp/bat) as pager:
 
 ```sh
 # Linux
-cat mytool.md | mdman | man -l -
+# TODO
 
 # macOS
-cat mytool.md | mdman | mandoc | less
+mdman mytool.md --stdout | mandoc | bat
 ```
-
-You can even create a shell alias if you use this often:
-
-```sh
-# Linux
-alias mmd='mdman --stdout | man -l -'
-
-# macOS
-alias mmd='mdman --stdout | mandoc | less'
-```
-
-Then run:
-
-```sh
-mmd mytool.md
-```
-
 
 ## Markdown Format
 
@@ -130,7 +114,7 @@ center-footer: MyTool v1.0
 ```markdown
 # NAME
 
-mytool - does things efficiently
+mytool - does things
 
 # SYNOPSIS
 
@@ -171,4 +155,3 @@ Generates `.roff`-formatted man pages using appropriate macros:
 
 - Support for man page cross-referencing
 - Improved formatting for nested styles
-- Optional preview rendering (e.g. using `man` pager directly)
