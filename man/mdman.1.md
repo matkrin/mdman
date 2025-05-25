@@ -27,15 +27,25 @@ number, and headers/footers.
 
 # OPTIONS
 
-**-o**, **--output** *FILE*
-    Specify the output *FILE* manually. Overrides automatic naming.
-
 **-S**, **--stdout**
     Print the generated roff output to stdout instead of creating a file.
 
 **-s**, **--section** *SECTION*
     Override the output section number. Defaults to the value in YAML frontmatter,
     or 1 if none is provided.
+
+**-o**, **--output** *FILE*
+    Specify the output *FILE* manually. This option overrides automatic naming.
+
+**-p**, **--pager**
+    Preview the generated man page in a pager.
+    This option overrides **--output** and **--stdout**.
+
+**-h**, **--help**
+    Print a help message.
+
+**-V**, **--version**
+    Print the version.
 
 # EXAMPLES
 
