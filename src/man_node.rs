@@ -1,5 +1,6 @@
 use markdown::mdast::{
-    AlignKind, Code, Emphasis, Heading, InlineCode, Link, List, ListItem, Node, Paragraph, Root, Strong, Table, TableCell, TableRow, Text, Yaml
+    AlignKind, Code, Emphasis, Heading, InlineCode, Link, List, ListItem, Node, Paragraph, Root,
+    Strong, Table, TableCell, TableRow, Text, Yaml,
 };
 use serde::Deserialize;
 

@@ -4,7 +4,6 @@ use jiff::Zoned;
 
 use crate::man_node::{ManNode, TableAlign, TitleLine};
 
-
 pub trait ToRoff {
     fn to_roff(&self) -> String;
 }
