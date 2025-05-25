@@ -29,12 +29,12 @@ cd mdman
 cargo build --release
 ```
 
-The resulting binary will be in target/release/md2man.
+The resulting binary will be in target/release/mdman.
 
 ## Usage
 
 ```sh
-md2man [OPTIONS] [<file.md>]
+mdman [OPTIONS] [<file.md>]
 ```
 
 If no file is provided, Markdown is read from stdin. If no output file is
