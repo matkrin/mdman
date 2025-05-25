@@ -2,7 +2,8 @@ use std::fmt::Write;
 
 use jiff::Zoned;
 
-use crate::{ManNode, TableAlign, TitleLine};
+use crate::man_node::{ManNode, TableAlign, TitleLine};
+
 
 pub trait ToRoff {
     fn to_roff(&self) -> String;
