@@ -35,17 +35,17 @@ center-footer: v1.0
 ```
 
 Elements:
-- `name` (required): Name of the man page
-- `section` (required): Section number (1–8)
-- `date` (optional): Date of last update
-- `left-footer`, `center-footer` (optional): Header/footer strings
+- *name* (required): Name of the man page
+- *section* (required): Section number (1–8)
+- *date* (optional): Date of last update
+- *left-footer*, *center-footer* (optional): Header/footer strings
 
 # SUPPORTED ELEMENTS
 
 ## Headings
 
-- '#' maps to *`.SH`* (section)
-- '##' maps to *`.SS`* (subsection)
+*#* maps to *`.SH`* (section),
+*##* maps to *`.SS`* (subsection)
 
 ## Paragraphs
 
@@ -138,7 +138,7 @@ Note:
 Markdown links in the form `[text](url)` are rendered using *`.UR`* / *`.UE`* blocks.
 E.g.:
 
-`[**mdman** on Github](https://github.com/matkrin/mdman)`
+`[mdman on Github](https://github.com/matkrin/mdman)`
 
 becomes
 
