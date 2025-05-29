@@ -99,6 +99,37 @@ Result:
     1. sub second
 1. sub third
 
+## Thematic Break
+
+Thematic breaks (`---`) mark the start and the end of a definition list, e.g.:
+
+```markdown
+
+# OPTIONS
+
+---
+
+- **-h**, **--help**
+  Print help message
+
+- **-v**, **--verbose**
+  Enter verbose mode
+
+---
+```
+
+becomes
+
+---
+
+- **-h**, **--help**
+  Print help message
+
+- **-v**, **--verbose**
+  Enter verbose mode
+
+---
+
 ## Tables
 
 Tables are written using GitHub-Flavored Markdown syntax:

@@ -27,25 +27,30 @@ number, and headers/footers.
 
 # OPTIONS
 
-**-S**, **--stdout**
-    Print the generated roff output to stdout instead of creating a file.
+---
 
-**-s**, **--section** *SECTION*
-    Override the output section number. Defaults to the value in YAML frontmatter,
-    or 1 if none is provided.
+- **-S**, **--stdout**
+  Print the generated roff output to stdout instead of creating a file.
 
-**-o**, **--output** *FILE*
-    Specify the output *FILE* manually. This option overrides automatic naming.
+- **-s**, **--section** _SECTION_
+  Override the output section number. Defaults to the value in YAML
+  frontmatter, or 1 if none is provided.
 
-**-p**, **--pager**
-    Preview the generated man page in a pager.
-    This option overrides **--output** and **--stdout**.
+- **-o**, **--output** _FILE_
+  Specify the output _FILE_ manually. This option
+  overrides automatic naming.
 
-**-h**, **--help**
-    Print a help message.
+- **-p**, **--pager**
+  Preview the generated man page in a pager. This option
+  overrides **--output** and **--stdout**.
 
-**-V**, **--version**
-    Print the version.
+- **-h**, **--help**
+  Print a help message.
+
+- **-V**, **--version**
+  Print the version.
+
+---
 
 # EXAMPLES
 
