@@ -233,3 +233,63 @@ fn extract_simple_text(node: &Node) -> String {
         _ => String::new(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use markdown::{ParseOptions, to_mdast};
+
+    fn parse(markdown: &str) -> Vec<ManNode> {
+        let options = ParseOptions::gfm();
+        let ast = to_mdast(markdown, &options).unwrap();
+        let mut convert_state = ConvertState::new();
+        convert_markdown_node(&ast, &mut convert_state)
+    }
+
+    #[test]
+    fn test_heading_conversion() {
+        let nodes = parse("# Hello\n");
+        assert!(
+            matches!(nodes[0], ManNode::SectionHeading { ref title, children: _ } if title == "Hello")
+        );
+    }
+
+    #[test]
+    fn test_paragraph_conversion() {
+        let nodes = parse("Hello, world!\n");
+        assert_eq!(nodes.len(), 1);
+        match &nodes[0] {
+            ManNode::Paragraph { children } => {
+                assert!(matches!(&children[0], ManNode::Text(text) if text == "Hello, world!"))
+            }
+            _ => panic!("Expected paragraph"),
+        }
+    }
+
+    #[test]
+    fn test_bold_text() {
+        let nodes = parse("**Bold**");
+        let paragraph = match &nodes[0] {
+            ManNode::Paragraph { children } => children,
+            _ => panic!("Expected paragraph"),
+        };
+        assert!(matches!(&paragraph[0], ManNode::Bold(text) if text == "Bold"));
+    }
+
+    #[test]
+    fn test_list_conversion() {
+        let nodes = parse("- item 1\n- item 2");
+        assert_eq!(nodes.len(), 1);
+        assert!(matches!(nodes[0], ManNode::BulletList { .. }));
+    }
+
+    #[test]
+    fn test_inline_code() {
+        let nodes = parse("`code`");
+        let para = match &nodes[0] {
+            ManNode::Paragraph { children } => children,
+            _ => panic!("Expected paragraph"),
+        };
+        assert!(matches!(&para[0], ManNode::InlineCode(code) if code == "code"));
+    }
+}

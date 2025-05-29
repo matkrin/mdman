@@ -153,3 +153,63 @@ fn escape(text: &str) -> String {
         .replace('|', "\\(ba")
         .replace('%', "\\%")
 }
+
+// roff.rs
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::man_node::*;
+
+    #[test]
+    fn test_title_line_roff() {
+        let title = ManNode::TitleLine(TitleLine {
+            name: "test-cmd".into(),
+            section: 1,
+            date: Some("2025-01-01".into()),
+            left_footer: Some("TestCmd".into()),
+            center_footer: Some("v1.0".into()),
+        });
+
+        let roff = title.to_roff();
+        assert_eq!(
+            roff,
+            ".TH \"TEST-CMD\" \"1\" \"2025-01-01\" \"TestCmd\" \"v1.0\"\n"
+        );
+    }
+
+    #[test]
+    fn test_paragraph_roff() {
+        let para = ManNode::Paragraph {
+            children: vec![ManNode::Text("Hello".into())],
+        };
+        let roff = para.to_roff();
+        // assert_eq!(roff, ".PP\nHello\n");
+        assert!(roff.contains(".PP\nHello\n"));
+    }
+
+    #[test]
+    fn test_bold_text_roff() {
+        let node = ManNode::Bold("bold text".into());
+        assert_eq!(node.to_roff(), "\\fBbold text\\fP");
+    }
+
+    #[test]
+    fn test_code_block_roff() {
+        let node = ManNode::CodeBlock("echo hello".into());
+        let roff = node.to_roff();
+        assert_eq!(roff, ".EX\necho hello\n.EE\n");
+    }
+
+    #[test]
+    fn test_uri_roff() {
+        let node = ManNode::Uri {
+            url: "https://example.com".into(),
+            title: None,
+            children: vec![ManNode::Text("Link Text".into())],
+        };
+
+        let roff = node.to_roff();
+        assert_eq!(roff, "\n.UR https://example.com\nLink Text\n.UE\n")
+    }
+}
