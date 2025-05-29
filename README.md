@@ -16,7 +16,7 @@ roff-formatted man pages.
   - Code blocks and inline code
   - Emphasis (italic, bold)
   - Lists (ordered and unordered)
-  - Hyperlinks
+  - Links
   - Tables (with alignment)
 - Print to stdout for preview or debugging
 - Preview directly as man page
@@ -75,6 +75,17 @@ cat doc.md | mdman --output out.5
 
 ### Combine with other utilities
 
+
+Use [bat](https://github.com/sharkdp/bat) as pager:
+
+```sh
+# Linux
+mdman mytool.md --stout | man --pager=bat -l -
+
+# macOS
+mdman mytool.md --stdout | mandoc | bat
+```
+
 Create HTML of the man page:
 
 ```sh
@@ -83,16 +94,6 @@ Create HTML of the man page:
 
 # macOS
 mdman mytool.md --stdout | mandoc -T html > out.html
-```
-
-Use [bat](https://github.com/sharkdp/bat) as pager:
-
-```sh
-# Linux
-# TODO
-
-# macOS
-mdman mytool.md --stdout | mandoc | bat
 ```
 
 ## Markdown Format
