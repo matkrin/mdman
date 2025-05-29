@@ -43,6 +43,9 @@ pub enum ManNode {
     },
     TableRow(Vec<ManNode>),
     TableCell(Vec<ManNode>),
+    DefinitionList {
+        children: Vec<ManNode>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,11 +78,26 @@ impl From<&AlignKind> for TableAlign {
     }
 }
 
-pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
-    match node {
-        Node::Root(Root { children, .. }) => {
-            children.iter().flat_map(convert_markdown_node).collect()
+pub struct ConvertState {
+    in_definition_list: bool,
+}
+impl ConvertState {
+    pub fn new() -> Self {
+        Self {
+            in_definition_list: false,
         }
+    }
+    fn toggle_in_definition_list(&mut self) {
+        self.in_definition_list = !self.in_definition_list
+    }
+}
+
+pub fn convert_markdown_node(node: &Node, state: &mut ConvertState) -> Vec<ManNode> {
+    match node {
+        Node::Root(Root { children, .. }) => children
+            .iter()
+            .flat_map(|x| convert_markdown_node(x, state))
+            .collect(),
         Node::Yaml(Yaml { value, .. }) => {
             let title_line = serde_yaml::from_str::<TitleLine>(value).unwrap();
             vec![ManNode::TitleLine(title_line)]
@@ -102,7 +120,10 @@ pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             vec![heading]
         }
         Node::Paragraph(Paragraph { children, .. }) => {
-            let inlines = children.iter().flat_map(convert_markdown_node).collect();
+            let inlines = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
             vec![ManNode::Paragraph { children: inlines }]
         }
         Node::Code(Code { value, .. }) => {
@@ -111,18 +132,22 @@ pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::List(List {
             children, ordered, ..
         }) => {
-            let items = children.iter().flat_map(convert_markdown_node).collect();
-            let man_node = if *ordered {
-                ManNode::NumberedList { children: items }
-            } else {
-                ManNode::BulletList { children: items }
+            let items = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
+
+            let man_node = match (ordered, state.in_definition_list) {
+                (true, _) => ManNode::NumberedList { children: items },
+                (false, true) => ManNode::DefinitionList { children: items },
+                (false, false) => ManNode::BulletList { children: items },
             };
             vec![man_node]
         }
         Node::ListItem(ListItem { children, .. }) => {
             let mut items = Vec::new();
             for child in children {
-                let p_nodes = convert_markdown_node(child);
+                let p_nodes = convert_markdown_node(child, state);
                 for n in p_nodes {
                     match n {
                         ManNode::Paragraph { children } => items.extend(children),
@@ -149,7 +174,10 @@ pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             title,
             ..
         }) => {
-            let items = children.iter().flat_map(convert_markdown_node).collect();
+            let items = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
             vec![ManNode::Uri {
                 url: url.clone(),
                 title: title.clone(),
@@ -159,7 +187,10 @@ pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
         Node::Table(Table {
             children, align, ..
         }) => {
-            let items = children.iter().flat_map(convert_markdown_node).collect();
+            let items = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
             let table_align = align.iter().map(Into::into).collect();
             vec![ManNode::Table {
                 align: table_align,
@@ -167,15 +198,25 @@ pub fn convert_markdown_node(node: &Node) -> Vec<ManNode> {
             }]
         }
         Node::TableRow(TableRow { children, .. }) => {
-            let items = children.iter().flat_map(convert_markdown_node).collect();
+            let items = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
             vec![ManNode::TableRow(items)]
         }
         Node::TableCell(TableCell { children, .. }) => {
-            let items = children.iter().flat_map(convert_markdown_node).collect();
+            let items = children
+                .iter()
+                .flat_map(|x| convert_markdown_node(x, state))
+                .collect();
             vec![ManNode::TableCell(items)]
         }
+        Node::ThematicBreak(_) => {
+            state.toggle_in_definition_list();
+            vec![]
+        }
         _ => {
-            dbg!(&node);
+            // dbg!(&node);
             vec![]
         }
     }

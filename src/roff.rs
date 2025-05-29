@@ -59,11 +59,12 @@ impl ToRoff for ManNode {
             ManNode::CodeBlock(text) => format!(".EX\n{}\n.EE\n", text),
             ManNode::Text(text) => {
                 let text = escape(text);
-                if text.starts_with("\n") {
-                    format!("\n.RS 8{}\n.RE", text)
-                } else {
-                    text.to_string()
-                }
+                text
+                // if text.starts_with("\n") {
+                //     format!("\n.RS 8{}\n.RE", text)
+                // } else {
+                //     text.to_string()
+                // }
             }
             ManNode::BulletList { children } => {
                 let mut content = String::new();
@@ -128,6 +129,15 @@ impl ToRoff for ManNode {
             ManNode::TableCell(children) => {
                 let text = children.iter().map(|n| n.to_roff()).collect::<String>();
                 format! {"T{{\n{}\nT}}\t", text}
+            }
+            ManNode::DefinitionList { children } => {
+                let mut s = String::new();
+
+                for child in children {
+                    // s.push_str(&format!(".TP\n\\fB{}\\fP\n\n", &child.to_roff()));
+                    s.push_str(&format!(".TP\n{}\n\n", &child.to_roff()));
+                }
+                s
             }
         }
     }

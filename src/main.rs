@@ -3,7 +3,7 @@ use std::process::{Command, Stdio};
 use std::{fs, io::Write, path::PathBuf};
 
 use clap::Parser;
-use man_node::{ManNode, convert_markdown_node};
+use man_node::{convert_markdown_node, ConvertState, ManNode};
 use markdown::Constructs;
 use markdown::ParseOptions;
 
@@ -54,7 +54,8 @@ fn main() {
     };
 
     let markdown_ast = markdown::to_mdast(&file_content, &parse_options).unwrap();
-    let man_nodes = convert_markdown_node(&markdown_ast);
+    let mut convert_state = ConvertState::new();
+    let man_nodes = convert_markdown_node(&markdown_ast, &mut convert_state);
 
     let section = args.section.unwrap_or_else(|| {
         match man_nodes
