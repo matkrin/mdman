@@ -11,13 +11,15 @@ roff-formatted man pages.
 - Converts to man-page format using roff syntax
 - Supports:
   - Section and subsection headings
+  - Definition lists
   - Paragraphs
   - Code blocks and inline code
   - Emphasis (italic, bold)
   - Lists (ordered and unordered)
   - Hyperlinks
-  - Tables (with alignment!)
+  - Tables (with alignment)
 - Print to stdout for preview or debugging
+- Preview directly as man page
 
 ## Installation
 
@@ -95,6 +97,8 @@ mdman mytool.md --stdout | mandoc | bat
 
 ## Markdown Format
 
+You can see a full description of how markdown elements get converted in [mdman(5)](/man/mdman.5.md).
+
 ### YAML Frontmatter
 
 Use YAML frontmatter to define required metadata for the `.TH` line:
@@ -109,27 +113,37 @@ center-footer: MyTool v1.0
 ---
 ```
 
-## Supported Markdown Elements
+### Some supported Markdown Elements
 
 ```markdown
 # NAME
 
-mytool - does things
+**mytool** - does things
 
 # SYNOPSIS
 
-mytool [OPTIONS] <INPUT>
+**mytool** [_OPTIONS_] <_INPUT_>
 
 # DESCRIPTION
 
-_mytool_ is a small utility that...
+**mytool** is a small utility that...
+
+# OPTIONS
+
+---
+- **-h**, **--help**
+  Print help message
+
+- **-v**, **--verbose**
+  Enter verbose mode
+---
+
+## Subsection Example
 
 - Lists work
   - Also nested ones
 
 - So do **bold**, _italic_, and `inline code`
-
-## Subsection Example
 
 Tables work too:
 
@@ -145,13 +159,3 @@ Generates `.roff`-formatted man pages using appropriate macros:
 - `.TH`, `.SH`, `.SS`, `.PP`, `.IP`, `.EX`, `.UR`, `.TS`, etc.
 - Proper escaping of special characters
 - Formatting of lists and nested structures
-
-## Known Limitations
-
-- No support for deeply nested formatting (e.g. bold inside italics)
-- Limited error handling on malformed Markdown or YAML
-
-## Future Enhancements
-
-- Support for man page cross-referencing
-- Improved formatting for nested styles
