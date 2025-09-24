@@ -90,7 +90,7 @@ Create HTML of the man page:
 
 ```sh
 # Linux
-# TODO
+mdman mytool.md --stdout | groff -Thtml -mandoc > out.html
 
 # macOS
 mdman mytool.md --stdout | mandoc -T html > out.html
