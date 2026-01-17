@@ -81,6 +81,7 @@ impl From<&AlignKind> for TableAlign {
 pub struct ConvertState {
     in_definition_list: bool,
 }
+
 impl ConvertState {
     pub fn new() -> Self {
         Self {

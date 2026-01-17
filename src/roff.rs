@@ -154,8 +154,6 @@ fn escape(text: &str) -> String {
         .replace('%', "\\%")
 }
 
-// roff.rs
-
 #[cfg(test)]
 mod tests {
     use super::*;

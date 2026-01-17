@@ -1,9 +1,10 @@
-use std::io::{self, Read, stdout};
-use std::process::{Command, Stdio};
+use std::fmt;
+use std::io::{self, IsTerminal, Read, stdout};
+use std::process::{self, Command, Stdio};
 use std::{fs, io::Write, path::PathBuf};
 
-use clap::Parser;
-use man_node::{convert_markdown_node, ConvertState, ManNode};
+use clap::{CommandFactory, Parser};
+use man_node::{ConvertState, ManNode, convert_markdown_node};
 use markdown::Constructs;
 use markdown::ParseOptions;
 
@@ -36,12 +37,12 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let file_content = if let Some(ref file) = args.file {
-        fs::read_to_string(file).unwrap()
-    } else {
-        let mut buf = String::new();
-        io::stdin().read_to_string(&mut buf).unwrap();
-        buf
+    let md_content = match get_md_content(&args.file) {
+        Ok(md) => md,
+        Err(e) => {
+            eprintln!("{}", e);
+            process::exit(1)
+        }
     };
 
     let parse_options = ParseOptions {
@@ -53,7 +54,7 @@ fn main() {
         ..ParseOptions::gfm()
     };
 
-    let markdown_ast = markdown::to_mdast(&file_content, &parse_options).unwrap();
+    let markdown_ast = markdown::to_mdast(&md_content, &parse_options).unwrap();
     let mut convert_state = ConvertState::new();
     let man_nodes = convert_markdown_node(&markdown_ast, &mut convert_state);
 
@@ -67,6 +68,7 @@ fn main() {
         }
     });
 
+
     let roff = man_nodes.iter().map(|n| n.to_roff()).collect::<String>();
 
     if args.pager {
@@ -75,12 +77,13 @@ fn main() {
     }
 
     if args.stdout || args.file.is_none() {
-        let mut stdout = stdout();
-        _ = stdout.write_all(roff.as_bytes());
-    } else {
-        let out_path = if let Some(output) = args.output {
-            output
-        } else {
+        _ = stdout().write_all(roff.as_bytes());
+        return;
+    }
+
+    let out_path = match args.output {
+        Some(output) => output,
+        None => {
             let stem = args
                 .file
                 .as_ref()
@@ -90,9 +93,70 @@ fn main() {
                 .to_string_lossy();
             let base_name = PathBuf::from(stem.split('.').next().unwrap());
             base_name.with_extension(section.to_string())
-        };
-        let mut out_file = fs::File::create(&out_path).unwrap();
-        _ = out_file.write(roff.as_bytes());
+        }
+    };
+    let mut out_file = fs::File::create(&out_path).unwrap();
+    _ = out_file.write(roff.as_bytes());
+}
+
+#[derive(Debug)]
+enum GetContentError {
+    FileNotFound(String),
+    ReadFileError(String, io::Error),
+    IsTerminalError(String),
+    ReadStdinError(io::Error),
+}
+
+impl fmt::Display for GetContentError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GetContentError::FileNotFound(file) => {
+                write!(f, "mdman: {}: No such file or directory", file)
+            }
+            GetContentError::ReadFileError(file, e) => {
+                write!(f, "mdman: Could not read file {}. Error: {}", file, e)
+            }
+            GetContentError::IsTerminalError(h) => {
+                write!(f, "mdman: Expected file or stdin\n{}", h)
+            }
+            GetContentError::ReadStdinError(e) => {
+                write!(f, "mdman: Could not read stdin. Error: {}", e)
+            }
+        }
+    }
+}
+
+impl std::error::Error for GetContentError {}
+
+fn get_md_content(file_like: &Option<PathBuf>) -> Result<String, GetContentError> {
+    match file_like {
+        Some(file) => {
+            if !file.exists() {
+                return Err(GetContentError::FileNotFound(
+                    file.to_string_lossy().to_string(),
+                ));
+            }
+            match fs::read_to_string(file) {
+                Ok(s) => Ok(s),
+                Err(e) => Err(GetContentError::ReadFileError(
+                    file.to_string_lossy().to_string(),
+                    e,
+                )),
+            }
+        }
+        _ => {
+            let mut stdin = io::stdin();
+            if stdin.is_terminal() {
+                return Err(GetContentError::IsTerminalError(
+                    Args::command().render_help().to_string(),
+                ));
+            }
+            let mut buf = String::new();
+            match stdin.read_to_string(&mut buf) {
+                Ok(_) => Ok(buf),
+                Err(e) => Err(GetContentError::ReadStdinError(e)),
+            }
+        }
     }
 }
 
@@ -129,7 +193,7 @@ fn handle_pager(roff: &str) {
         });
 
     if let Err(e) = pager_cmd {
-        eprintln!("Error showing man page in pager: {}", e);
+        eprintln!("mdman: Error showing man page in pager: {}", e);
         std::process::exit(1);
     }
 }
